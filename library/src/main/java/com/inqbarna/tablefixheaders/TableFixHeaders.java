@@ -98,9 +98,9 @@ public class TableFixHeaders extends ViewGroup {
 		super(context, attrs);
 
 		this.headView = null;
-		this.rowViewList = new ArrayList<View>();
-		this.columnViewList = new ArrayList<View>();
-		this.bodyViewTable = new ArrayList<List<View>>();
+		this.rowViewList = new ArrayList<>();
+		this.columnViewList = new ArrayList<>();
+		this.bodyViewTable = new ArrayList<>();
 
 		this.needRelayout = true;
 
@@ -183,6 +183,8 @@ public class TableFixHeaders extends ViewGroup {
 		return intercept;
 	}
 
+	private boolean verticalLock = false;
+	private boolean horizontalLock = false;
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
 		if (velocityTracker == null) { // If we do not have velocity tracker
@@ -207,6 +209,10 @@ public class TableFixHeaders extends ViewGroup {
 				currentX = x2;
 				currentY = y2;
 
+				if (!verticalLock)
+					horizontalLock = horizontalLock | Math.abs(diffX) < Math.abs(diffY);
+				if (!horizontalLock)
+					verticalLock = verticalLock | Math.abs(diffX) > Math.abs(diffY);
 				scrollBy(diffX, diffY);
 				break;
 			}
@@ -215,7 +221,12 @@ public class TableFixHeaders extends ViewGroup {
 				velocityTracker.computeCurrentVelocity(1000, maximumVelocity);
 				int velocityX = (int) velocityTracker.getXVelocity();
 				int velocityY = (int) velocityTracker.getYVelocity();
-
+				if (horizontalLock)
+					velocityX = 0;
+				if (verticalLock)
+					velocityY = 0;
+				horizontalLock = false;
+				verticalLock = false;
 				if (Math.abs(velocityX) > minimumVelocity || Math.abs(velocityY) > minimumVelocity) {
 					flinger.start(getActualScrollX(), getActualScrollY(), velocityX, velocityY, getMaxScrollX(), getMaxScrollY());
 				} else {
@@ -245,6 +256,12 @@ public class TableFixHeaders extends ViewGroup {
 
 	@Override
 	public void scrollBy(int x, int y) {
+		if (horizontalLock) {
+			x = 0;
+		}
+		if (verticalLock) {
+			y = 0;
+		}
 		scrollX += x;
 		scrollY += y;
 
@@ -457,7 +474,7 @@ public class TableFixHeaders extends ViewGroup {
 		View view = makeView(row, -1, widths[0], heights[row + 1]);
 		columnViewList.add(index, view);
 
-		List<View> list = new ArrayList<View>();
+		List<View> list = new ArrayList<>();
 		final int size = rowViewList.size() + firstColumn;
 		for (int i = firstColumn; i < size; i++) {
 			view = makeView(row, i, widths[i + 1], heights[row + 1]);
@@ -668,7 +685,7 @@ public class TableFixHeaders extends ViewGroup {
 				for (int i = firstRow; i < rowCount && top < height; i++) {
 					bottom = top + heights[i + 1];
 					left = widths[0] - scrollX;
-					List<View> list = new ArrayList<View>();
+					List<View> list = new ArrayList<>();
 					for (int j = firstColumn; j < columnCount && left < width; j++) {
 						right = left + widths[j + 1];
 						final View view = makeAndSetup(i, j, left, top, right, bottom);
